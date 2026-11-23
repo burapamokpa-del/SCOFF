@@ -7,6 +7,17 @@
   <meta name="description" content="แบบประเมิน SCOFF 5 ข้อสำหรับนักเรียน พร้อม Dashboard ไม่แสดงข้อมูลระบุตัวบุคคล">
   <title>SCOFF Care | แบบประเมินพฤติกรรมการกิน</title>
   <style>
+    .auth-card{max-width:690px;margin:0 auto 24px;padding:28px}
+    .auth-title{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .auth-title h3{margin:0;font-size:23px}.auth-title p{margin:0}
+    .auth-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f2f0fa;padding:6px;border-radius:16px;margin-bottom:22px}
+    .auth-switch button{border:0;border-radius:12px;background:transparent;color:#677187;padding:12px 8px;font-weight:700}
+    .auth-switch button.selected{background:white;color:#6557bd;box-shadow:0 4px 14px #6b58b31a}
+    .auth-fields{display:grid;gap:14px}.auth-fields .field input{width:100%}
+    .auth-remember{display:flex;align-items:center;gap:9px;font-weight:600;margin-top:20px}
+    .auth-remember input{width:18px;height:18px;accent-color:#8175d6}
+    #auth-submit{margin-top:16px}
+
     :root{--ink:#273951;--muted:#697889;--purple:#8175d6;--purple-d:#6557bd;--mint:#b9e8dd;--rose:#f8dae7;--peach:#ffebd5;--sky:#dcecfb;--line:#e7e9f1;--white:#fff;--shadow:0 16px 42px rgba(53,69,105,.09);--radius:23px}
     *,*::before,*::after{box-sizing:border-box}
     [hidden]{display:none!important}
@@ -138,7 +149,20 @@
 
     <section class="panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
       <div class="dash-head"><div class="dash-title-group"><h2>ภาพรวมผลการคัดกรอง</h2><p>สรุปเฉพาะจำนวนและสัดส่วน ไม่มีข้อมูลส่วนบุคคลหรือผลรายคน</p></div><span class="source-tag" id="data-source-label">ข้อมูลทดลองในเบราว์เซอร์</span></div>
-      <div class="admin-bar" id="admin-bar" hidden><div class="connect-field"><label for="admin-key">รหัสเข้าถึง Dashboard (เฉพาะผู้ดูแล)</label><input type="password" id="admin-key" autocomplete="off" placeholder="รหัสจาก Google Apps Script"></div><button class="btn btn-primary" type="button" id="load-dashboard">ดึงสรุปจาก Google Sheets</button></div>
+      <div class="card auth-card" id="admin-auth">
+        <div class="auth-title"><span class="bubble">🔐</span><div><h3>พื้นที่ผู้ดูแล (Admin)</h3><p class="subtitle">สมัครบัญชีครั้งแรกหรือเข้าสู่ระบบเพื่อดูข้อมูลสรุป</p></div></div>
+        <div class="auth-switch"><button type="button" id="auth-login-tab" class="selected">เข้าสู่ระบบ</button><button type="button" id="auth-register-tab">สมัคร Admin ครั้งแรก</button></div>
+        <form id="auth-form" autocomplete="on">
+          <div class="auth-fields"><div class="field"><label for="auth-username">ชื่อผู้ใช้</label><input id="auth-username" name="username" autocomplete="username" minlength="3" maxlength="32" required placeholder="admin"></div>
+          <div class="field"><label for="auth-password">รหัสผ่าน</label><input id="auth-password" name="password" type="password" minlength="12" maxlength="128" autocomplete="current-password" required placeholder="อย่างน้อย 12 ตัวอักษร"></div>
+          <div class="field" id="setup-code-row" hidden><label for="auth-setup-code">รหัสเปิดใช้งานจาก Apps Script</label><input id="auth-setup-code" autocomplete="off" placeholder="รหัสจาก setupAdminRegistration"></div></div>
+          <label class="auth-remember"><input id="remember-admin" type="checkbox" checked> จดจำการเข้าสู่ระบบบนเบราว์เซอร์นี้</label>
+          <p class="tiny">ระบบจดจำโทเค็น ไม่เก็บรหัสผ่านในเบราว์เซอร์ โทเค็นจะหมดอายุหากไม่ใช้งาน 90 วัน ห้ามเลือกบนอุปกรณ์สาธารณะ</p>
+          <button class="btn btn-primary" type="submit" id="auth-submit">เข้าสู่ระบบ</button>
+          <div class="alert" id="auth-alert" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <div class="admin-bar" id="admin-bar" hidden><div><strong>เข้าสู่ระบบเป็น <span id="admin-name"></span></strong><p class="tiny" style="margin:2px 0">Dashboard รีเฟรชอัตโนมัติทุก 60 วินาที</p></div><button class="btn btn-primary" type="button" id="load-dashboard">อัปเดต Dashboard</button><button class="btn btn-soft" type="button" id="logout-dashboard">ออกจากระบบ</button></div>
       <p class="admin-hint" id="dashboard-hint">แสดงเฉพาะผลทดลองในแท็บเบราว์เซอร์นี้ ยังไม่ได้บันทึกลง Google Sheets</p>
       <div class="stats">
         <div class="stat"><div class="label">จำนวนแบบประเมินครบ</div><div class="value" id="stat-total">0</div><div class="mini">รายการที่ตอบครบ 5 ข้อ</div></div>
@@ -152,7 +176,7 @@
       </div>
       <div class="card chart-card question-rates"><div class="chart-title"><h3>จำนวนผู้ตอบ “ใช่” ในแต่ละข้อ</h3><span>ข้อมูลสรุปเท่านั้น</span></div><div id="question-rates"></div></div>
       <div id="dashboard-alert" class="alert" role="status" aria-live="polite"></div>
-      <div class="dash-foot">🔐 <span>Dashboard ไม่แสดงชื่อ นามสกุล รหัสผู้รับบริการ อายุรายบุคคล หรือคำตอบรายคน หากเชื่อมต่อ Google Sheets จะต้องใช้รหัสผู้ดูแลเพื่อดึงข้อมูลสรุป และจำกัดสิทธิ์ไฟล์ต้นทางให้บุคลากรที่เกี่ยวข้องเท่านั้น</span></div>
+      <div class="dash-foot">🔐 <span>Dashboard ไม่แสดงชื่อ นามสกุล รหัสผู้รับบริการ อายุรายบุคคล หรือคำตอบรายคน หากเชื่อมต่อ Google Sheets จะต้องเข้าสู่ระบบ Admin เพื่อดึงข้อมูลสรุป และจำกัดสิทธิ์ไฟล์ต้นทางให้บุคลากรที่เกี่ยวข้องเท่านั้น</span></div>
     </section>
 
     <section class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
@@ -161,13 +185,13 @@
           <div class="connect-field"><label for="endpoint-url">Google Apps Script Web App URL</label><input id="endpoint-url" type="url" autocomplete="off" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec"></div>
           <div class="endpoint-actions"><button type="button" class="btn btn-primary" id="save-endpoint">บันทึก URL</button><button type="button" class="btn btn-soft" id="remove-endpoint">ยกเลิกการเชื่อมต่อ</button></div>
           <div class="alert" role="status" aria-live="polite" id="settings-alert"></div>
-          <p class="tiny" style="margin-top:22px">URL จะจัดเก็บเฉพาะบนเบราว์เซอร์นี้ เพื่อให้เปิดใช้ซ้ำได้โดยไม่ต้องพิมพ์ใหม่ รหัส Dashboard จะไม่ถูกจัดเก็บไว้ในเบราว์เซอร์</p>
+          <p class="tiny" style="margin-top:22px">URL ของคุณถูกฝังใน HTML แล้วและจะถูกใช้เป็นค่าเริ่มต้นเสมอ บัญชี Admin จดจำการเข้าสู่ระบบได้บนอุปกรณ์ส่วนตัว โดยไม่บันทึกรหัสผ่าน</p>
         </div>
         <div class="card setup-card"><h3 style="font-size:18px">ขั้นตอนการติดตั้ง</h3>
           <div class="setup-step"><span class="step">01</span><div><strong>นำเข้าไฟล์ Excel เป็น Google Sheets</strong><p>เปิดไฟล์ แล้วเลือก ส่วนขยาย → Apps Script</p></div></div>
-          <div class="setup-step"><span class="step">02</span><div><strong>วางโค้ดจาก Code.gs</strong><p>คัดลอกโค้ดทั้งหมด และรันฟังก์ชัน setupDashboardKey หนึ่งครั้งเพื่อสร้างรหัสผู้ดูแล</p></div></div>
+          <div class="setup-step"><span class="step">02</span><div><strong>วางโค้ดจาก Code.gs</strong><p>คัดลอกโค้ดทั้งหมด และรันฟังก์ชัน setupAdminRegistration เพื่อสร้างรหัสเปิดใช้งาน แล้วสมัครบัญชี Admin ครั้งแรก</p></div></div>
           <div class="setup-step"><span class="step">03</span><div><strong>Deploy เป็น Web App</strong><p>เรียกใช้ในนามเจ้าของไฟล์ เลือกให้บุคคลทั่วไปเข้าถึงได้เฉพาะ API และเก็บ URL ที่ลงท้าย /exec</p></div></div>
-          <div class="setup-step"><span class="step">04</span><div><strong>นำ URL มาใส่ในช่องด้านซ้าย</strong><p>ทดลองส่งข้อมูลและเปิด Dashboard ด้วยรหัสผู้ดูแล</p></div></div>
+          <div class="setup-step"><span class="step">04</span><div><strong>นำ URL มาใส่ในช่องด้านซ้าย</strong><p>ทดลองส่งข้อมูลและเข้าสู่ระบบ Admin ก่อนเปิด Dashboard</p></div></div>
         </div>
       </div>
     </section>
@@ -184,12 +208,22 @@
     'คุณคิดว่าตัวเองอ้วน ทั้งที่คนอื่นบอกว่าคุณผอมเกินไปหรือไม่?',
     'คุณรู้สึกว่าเรื่องอาหารมีอิทธิพลหรือครอบงำชีวิตของคุณมากหรือไม่?'
   ];
-  const ENDPOINT_KEY='scoff_endpoint_v1';
+  const DEFAULT_ENDPOINT='https://script.google.com/macros/s/AKfycbx-BU3-cenXkeh6CUuGkAiLCn2Y34TPTY7m8QclFxy5luusTu17XuVX4ti9qYkk9VOmnA/exec';
+  const ENDPOINT_KEY='scoff_endpoint_v2';
   const DEMO_KEY='scoff_demo_aggregate_v1';
+  const ADMIN_SESSION_KEY='scoff_admin_token_session_v2';
+  const ADMIN_REMEMBER_KEY='scoff_admin_token_remember_v2';
+  const REFRESH_MS=60000;
   const $=id=>document.getElementById(id);
   const newStats=()=>({total:0,positive:0,negative:0,distribution:[0,0,0,0,0,0],yesCounts:[0,0,0,0,0]});
   let demoStats=readDemo();
-  let endpoint=localStorageSafeGet(ENDPOINT_KEY)||'';
+  let endpoint=DEFAULT_ENDPOINT; // ค่าคงที่จากไฟล์ HTML ไม่ถูกแทนที่ด้วย URL เก่าบนเครื่อง
+  localStorageSafeSet(ENDPOINT_KEY,DEFAULT_ENDPOINT);
+  let dashboardBusy=false;
+  let lastStats=null;
+  let authorizedToken='';
+  let authMode='login';
+  let adminUsername='';
   let busy=false;
   let submitted=false;
   function localStorageSafeGet(key){try{return localStorage.getItem(key)}catch{return null}}
@@ -205,8 +239,70 @@
   function readAnswers(){return QUESTIONS.map((_,i)=>document.querySelector(`input[name="question-${i}"]:checked`)?.value||null)}
   function progress(){const count=readAnswers().filter(Boolean).length;$('progress-label').textContent=`${count} / 5 ข้อ`;$('progress-fill').style.width=(count*20)+'%';$('progress-bar').setAttribute('aria-valuenow',count);QUESTIONS.forEach((_,i)=>$('question-card-'+i).classList.toggle('answered',!!readAnswers()[i]));$('completion-tip').textContent=count===5?'ตอบครบแล้ว พร้อมดูผลการคัดกรอง':'ตอบคำถามให้ครบทุกข้อก่อนส่งผล';$('submit-assessment').disabled=busy||submitted}
   function showAlert(id,message,kind){const el=$(id);if(!message){el.className='alert';el.textContent='';return;}el.className='alert show '+(kind||'info');el.textContent=message;}
-  function updateConnection(){const connected=!!endpoint;$('status-dot').classList.toggle('connected',connected);$('status-text').textContent=connected?'ตั้งค่า URL แล้ว · รอการยืนยันจาก Backend':'โหมดทดลอง · ยังไม่เชื่อมต่อ Google Sheets';$('submit-assessment').textContent=connected?'คำนวณและบันทึกลง Google Sheets':'ดูคะแนนและบันทึกผลทดลอง';$('admin-bar').hidden=!connected;$('data-source-label').textContent=connected?'ข้อมูลจาก Google Sheets (เมื่อโหลดแล้ว)':'ข้อมูลทดลองในเบราว์เซอร์';$('dashboard-hint').textContent=connected?'กรอกรหัสผู้ดูแลแล้วดึงข้อมูลสรุปจาก Google Sheets; ก่อนดึงข้อมูล ตัวเลขจะเป็น 0':'แสดงเฉพาะผลทดลองในแท็บเบราว์เซอร์นี้ ยังไม่ได้บันทึกลง Google Sheets';$('endpoint-url').value=endpoint;renderDashboard(connected?newStats():demoStats)}
-  function showTab(tab){['assessment','dashboard','settings'].forEach(name=>{$('panel-'+name).classList.toggle('active',name===tab);$('tab-'+name).setAttribute('aria-selected',name===tab?'true':'false')});if(endpoint){renderDashboard(newStats());$('admin-key').value='';$('data-source-label').textContent='รอโหลดข้อมูลจาก Google Sheets';$('dashboard-hint').textContent='กรอกรหัสผู้ดูแลแล้วดึงข้อมูลสรุปจาก Google Sheets';showAlert('dashboard-alert','');}else if(tab==='dashboard'){renderDashboard(demoStats)}window.scrollTo({top:210,behavior:'smooth'})}
+  function sessionStorageSafeGet(key){try{return sessionStorage.getItem(key)||''}catch{return ''}}
+  function sessionStorageSafeSet(key,value){try{sessionStorage.setItem(key,value)}catch{}}
+  function sessionStorageSafeRemove(key){try{sessionStorage.removeItem(key)}catch{}}
+  function getAdminToken(){return authorizedToken||sessionStorageSafeGet(ADMIN_SESSION_KEY)||localStorageSafeGet(ADMIN_REMEMBER_KEY)||''}
+  function rememberToken(token, username){
+    authorizedToken=token;adminUsername=username||'Admin';
+    if($('remember-admin').checked){localStorageSafeSet(ADMIN_REMEMBER_KEY,token);sessionStorageSafeRemove(ADMIN_SESSION_KEY)}
+    else{sessionStorageSafeSet(ADMIN_SESSION_KEY,token);localStorageSafeRemove(ADMIN_REMEMBER_KEY)}
+    $('admin-name').textContent=adminUsername;
+    $('admin-auth').hidden=true;$('admin-bar').hidden=false;
+  }
+  function clearAdmin(){authorizedToken='';adminUsername='';sessionStorageSafeRemove(ADMIN_SESSION_KEY);localStorageSafeRemove(ADMIN_REMEMBER_KEY);$('auth-password').value='';}
+  function setAuthMode(mode){
+    authMode=mode;const signup=mode==='register';
+    $('auth-login-tab').classList.toggle('selected',!signup);$('auth-register-tab').classList.toggle('selected',signup);
+    $('setup-code-row').hidden=!signup;$('auth-setup-code').required=signup;
+    $('auth-password').setAttribute('autocomplete',signup?'new-password':'current-password');
+    $('auth-submit').textContent=signup?'สมัครบัญชีผู้ดูแล':'เข้าสู่ระบบ';
+    showAlert('auth-alert','');
+  }
+  function updateConnection(){const connected=!!endpoint;
+    $('status-dot').classList.toggle('connected',connected);
+    $('status-text').textContent=connected?'กำหนด URL ของ Google Sheets แล้ว · พร้อมส่งข้อมูล':'โหมดทดลอง · ยังไม่เชื่อมต่อ Google Sheets';
+    $('submit-assessment').textContent=connected?'คำนวณและบันทึกลง Google Sheets':'ดูคะแนนและบันทึกผลทดลอง';
+    $('data-source-label').textContent=connected?'รอเข้าสู่ระบบ Admin':'ข้อมูลทดลองในเบราว์เซอร์';
+    $('dashboard-hint').textContent=connected?'เข้าสู่ระบบ Admin เพื่อโหลดข้อมูลจาก Google Sheets':'แสดงเฉพาะผลทดลองในแท็บเบราว์เซอร์นี้';
+    $('endpoint-url').value=endpoint;
+    if(!lastStats)renderDashboard(connected?newStats():demoStats);
+  }
+  function showTab(tab){
+    ['assessment','dashboard','settings'].forEach(name=>{$('panel-'+name).classList.toggle('active',name===tab);$('tab-'+name).setAttribute('aria-selected',name===tab?'true':'false')});
+    if(tab==='dashboard'){
+      if(endpoint){if(getAdminToken())refreshDashboard();else{$('admin-auth').hidden=false;$('admin-bar').hidden=true;$('data-source-label').textContent='รอเข้าสู่ระบบ Admin';}}
+      else renderDashboard(demoStats);
+    }
+    window.scrollTo({top:210,behavior:'smooth'});
+  }
+  function forgetAdmin(){
+    const token=getAdminToken();
+    authorizedToken='';adminUsername='';
+    sessionStorageSafeRemove(ADMIN_SESSION_KEY);localStorageSafeRemove(ADMIN_REMEMBER_KEY);
+    $('auth-password').value='';$('auth-setup-code').value='';
+    $('admin-auth').hidden=false;$('admin-bar').hidden=true;
+    lastStats=null;renderDashboard(newStats());
+    $('data-source-label').textContent='รอเข้าสู่ระบบ Admin';
+    $('dashboard-hint').textContent='ออกจากระบบแล้ว · กรุณาเข้าสู่ระบบเพื่อดูข้อมูลล่าสุด';
+    showAlert('dashboard-alert','ออกจากระบบผู้ดูแลแล้ว','info');
+    if(token)requestBackend('logoutAdmin',{token}).catch(()=>{});
+  }
+  async function submitAuth(event){
+    event.preventDefault();
+    const username=$('auth-username').value.trim();const password=$('auth-password').value;
+    if(!username||password.length<12){showAlert('auth-alert','โปรดกรอกชื่อผู้ใช้และรหัสผ่านอย่างน้อย 12 ตัวอักษร','error');return;}
+    const button=$('auth-submit');button.disabled=true;
+    try{
+      const action=authMode==='register'?'registerAdmin':'loginAdmin';
+      const response=await requestBackend(action,{username,password,setupCode:$('auth-setup-code').value.trim()});
+      rememberToken(response.token,response.username);
+      $('auth-password').value='';$('auth-setup-code').value='';
+      setAuthMode('login');showAlert('auth-alert','');
+      await refreshDashboard();
+    }catch(error){showAlert('auth-alert',error.message,'error')}
+    finally{button.disabled=false}
+  }
   function renderResult(score,stored,detail){const positive=score>=2;const box=$('assessment-result');box.className='result show '+(positive?'high':'low');$('result-score').textContent=score+' / 5';$('result-heading').textContent=positive?'คัดกรองเป็นบวก — ควรประเมินเพิ่มเติม':'ยังไม่พบผลคัดกรองบวก';$('result-description').textContent=positive?'ตอบ “ใช่” ตั้งแต่ 2 ข้อขึ้นไป ควรซักประวัติพฤติกรรมการกิน ประเมินสภาพร่างกายและสุขภาพจิตเพิ่มเติม หรือส่งต่อบุคลากรที่เหมาะสม':'คะแนน 0–1 ไม่ได้ตัดภาวะผิดปกติของการกิน หากมีอาการหรือพฤติกรรมน่าสงสัยควรได้รับการประเมินเพิ่มเติม';$('result-storage').textContent=detail|| (stored?'บันทึกข้อมูลเรียบร้อยแล้ว':'ผลคำนวณเบื้องต้น');box.scrollIntoView({behavior:'smooth',block:'nearest'});}
   function renderDashboard(stats){
     const total=Math.max(0,Number(stats.total)||0),positive=Math.max(0,Number(stats.positive)||0),negative=total-positive,rate=total?Math.round(100*positive/total):0;
@@ -237,22 +333,53 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(examDate)||!/^[A-Za-z0-9_-]{1,40}$/.test(studentCode)||!Number.isInteger(age)||age<1||age>120){showAlert('assessment-alert','โปรดกรอกวันที่ รหัสผู้รับบริการ (ตัวอักษรอังกฤษ/ตัวเลข/ขีดกลาง) และอายุให้ถูกต้อง','error');return}
     const score=answers.filter(a=>a==='ใช่').length;busy=true;progress();showAlert('assessment-alert',endpoint?'กำลังส่งข้อมูลไปยัง Google Sheets…':'กำลังประมวลผล…','info');
     try{
-      if(endpoint){const result=await requestBackend('save',{examDate,studentCode,age,answers});submitted=true;showAlert('assessment-alert','บันทึกผลลง Google Sheets สำเร็จ (แถวที่ '+result.row+')','success');renderResult(score,true,'บันทึกลง Google Sheets แล้ว · แถวที่ '+result.row+' · ผลนี้เป็นการคัดกรอง ไม่ใช่การวินิจฉัย');}
+      if(endpoint){const result=await requestBackend('save',{examDate,studentCode,age,answers});submitted=true;showAlert('assessment-alert','บันทึกผลลง Google Sheets สำเร็จ (แถวที่ '+result.row+')','success');renderResult(score,true,'บันทึกลง Google Sheets แล้ว · แถวที่ '+result.row+' · ผลนี้เป็นการคัดกรอง ไม่ใช่การวินิจฉัย');if(getAdminToken())refreshDashboard();}
       else{addDemo(answers);submitted=true;showAlert('assessment-alert','บันทึกผลทดลองสำเร็จ (เฉพาะสรุปคะแนนในแท็บนี้ ไม่ส่งไปยัง Google Sheets)','success');renderResult(score,false,'โหมดทดลอง · บันทึกเฉพาะข้อมูลสถิติในแท็บนี้ ไม่เก็บรหัสผู้รับบริการและอายุ');}
     }catch(error){showAlert('assessment-alert','บันทึกไม่สำเร็จ: '+error.message,'error');renderResult(score,false,'แสดงผลคำนวณชั่วคราว · ยังไม่มีการยืนยันว่าบันทึกข้อมูลแล้ว');}
     finally{busy=false;progress()}
   }
   function resetAssessment(){if(busy)return;$('assessment-form').reset();$('exam-date').value=todayLocal();submitted=false;$('assessment-result').className='result';showAlert('assessment-alert','');progress();$('student-code').focus()}
-  async function refreshDashboard(){if(!endpoint){renderDashboard(demoStats);return}const key=$('admin-key').value.trim();if(!key){showAlert('dashboard-alert','กรุณากรอกรหัสเข้าถึง Dashboard','error');return}const button=$('load-dashboard');button.disabled=true;button.textContent='กำลังดึงสรุป…';showAlert('dashboard-alert','กำลังโหลดข้อมูลภาพรวมจาก Google Sheets','info');try{const response=await requestBackend('dashboard',{key});renderDashboard(response.stats);$('data-source-label').textContent='ข้อมูลจริงจาก Google Sheets';$('dashboard-hint').textContent='อัปเดตสรุปจาก Google Sheets สำเร็จ · ไม่มีข้อมูลรายบุคคล';showAlert('dashboard-alert','โหลดผลสรุปสำเร็จ','success')}catch(error){showAlert('dashboard-alert','ไม่สามารถโหลด Dashboard: '+error.message,'error')}finally{button.disabled=false;button.textContent='ดึงสรุปจาก Google Sheets'}}
+  async function refreshDashboard(){
+    if(!endpoint){renderDashboard(demoStats);return}
+    if(dashboardBusy)return;
+    const token=getAdminToken();
+    if(!token){$('admin-auth').hidden=false;$('admin-bar').hidden=true;return}
+    dashboardBusy=true;const button=$('load-dashboard');button.disabled=true;button.textContent='กำลังอัปเดต…';
+    $('dashboard-hint').textContent='กำลังอัปเดตข้อมูลจาก Google Sheets…';
+    try{
+      const response=await requestBackend('dashboard',{token});
+      rememberToken(token,response.username);
+      lastStats=response.stats;renderDashboard(response.stats);
+      $('data-source-label').textContent='ข้อมูลจริงจาก Google Sheets';
+      $('dashboard-hint').textContent='อัปเดตล่าสุด '+new Date().toLocaleTimeString('th-TH')+' · รีเฟรชอัตโนมัติทุก 60 วินาทีเมื่อเปิด Dashboard';
+      showAlert('dashboard-alert','');
+    }catch(error){
+      if(/เซสชันหมดอายุ|กรุณาเข้าสู่ระบบ/.test(error.message)){
+        authorizedToken='';sessionStorageSafeRemove(ADMIN_SESSION_KEY);localStorageSafeRemove(ADMIN_REMEMBER_KEY);
+        $('admin-auth').hidden=false;$('admin-bar').hidden=true;
+        lastStats=null;renderDashboard(newStats());
+      }
+      $('dashboard-hint').textContent='ไม่สามารถอัปเดตข้อมูลล่าสุดได้';
+      showAlert('dashboard-alert','ไม่สามารถโหลด Dashboard: '+error.message,'error');
+    }finally{dashboardBusy=false;button.disabled=false;button.textContent='อัปเดต Dashboard'}
+  }
   function saveEndpoint(){const value=$('endpoint-url').value.trim();let url;try{url=new URL(value);if(url.protocol!=='https:'||url.hostname!=='script.google.com'||!url.pathname.endsWith('/exec'))throw new Error('bad url')}catch{showAlert('settings-alert','กรุณาใส่ Google Apps Script Web App URL ที่ขึ้นต้น https://script.google.com/ และลงท้าย /exec','error');return}endpoint=value;localStorageSafeSet(ENDPOINT_KEY,value);updateConnection();showAlert('settings-alert','บันทึก URL แล้ว กรุณาทดลองส่งแบบประเมินเพื่อยืนยันว่าการเชื่อมต่อใช้งานได้จริง','success')}
-  function removeEndpoint(){endpoint='';localStorageSafeRemove(ENDPOINT_KEY);$('admin-key').value='';updateConnection();showAlert('settings-alert','เปลี่ยนเป็นโหมดทดลองแล้ว ข้อมูลใน Google Sheets ไม่ถูกลบ','info')}
+  function removeEndpoint(){endpoint=DEFAULT_ENDPOINT;localStorageSafeSet(ENDPOINT_KEY,DEFAULT_ENDPOINT);forgetAdmin();updateConnection();showAlert('settings-alert','คืนค่า URL ที่ฝังใน HTML แล้ว และออกจากระบบผู้ดูแล ข้อมูลใน Google Sheets ไม่ถูกลบ','info')}
   renderQuestions();$('exam-date').value=todayLocal();updateConnection();
+  if(getAdminToken()){$('remember-admin').checked=!!localStorageSafeGet(ADMIN_REMEMBER_KEY);$('admin-auth').hidden=true;$('admin-bar').hidden=false;$('admin-name').textContent='Admin';}
+  setInterval(()=>{if(document.visibilityState==='visible'&&$('panel-dashboard').classList.contains('active')&&endpoint&&getAdminToken())refreshDashboard()},REFRESH_MS);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&$('panel-dashboard').classList.contains('active')&&getAdminToken())refreshDashboard()});
   document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
   $('brand-link').addEventListener('click',e=>{e.preventDefault();showTab('assessment')});
   $('question-list').addEventListener('change',progress);
   $('assessment-form').addEventListener('submit',submitAssessment);
   $('reset-assessment').addEventListener('click',resetAssessment);
   $('load-dashboard').addEventListener('click',refreshDashboard);
+  $('logout-dashboard').addEventListener('click',forgetAdmin);
+  $('auth-form').addEventListener('submit',submitAuth);
+  $('auth-login-tab').addEventListener('click',()=>setAuthMode('login'));
+  $('auth-register-tab').addEventListener('click',()=>setAuthMode('register'));
+  $('remember-admin').addEventListener('change',()=>{const token=getAdminToken();if(!token)return;if($('remember-admin').checked){localStorageSafeSet(ADMIN_REMEMBER_KEY,token);sessionStorageSafeRemove(ADMIN_SESSION_KEY)}else{sessionStorageSafeSet(ADMIN_SESSION_KEY,token);localStorageSafeRemove(ADMIN_REMEMBER_KEY)}});
   $('save-endpoint').addEventListener('click',saveEndpoint);
   $('remove-endpoint').addEventListener('click',removeEndpoint);
   progress();
